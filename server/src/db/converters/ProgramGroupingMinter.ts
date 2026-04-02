@@ -196,6 +196,7 @@ export class ProgramGroupingMinter {
           show.year ??
           (show.releaseDate ? dayjs(show.releaseDate).year() : null),
         rating: show.rating,
+        state: 'ok',
       },
       externalIds: this.mintExternalIdsFromIdentifiers(
         mediaSource,
@@ -290,6 +291,7 @@ export class ProgramGroupingMinter {
         externalKey: artist.externalId,
         plot: artist.plot,
         tagline: artist.tagline,
+        state: 'ok',
       },
       externalIds: this.mintExternalIdsFromIdentifiers(
         mediaSource,
@@ -350,6 +352,7 @@ export class ProgramGroupingMinter {
         year:
           season.year ??
           (season.releaseDate ? dayjs(season.releaseDate).year() : null),
+        state: 'ok',
       },
       externalIds: this.mintExternalIdsFromIdentifiers(
         mediaSource,
@@ -411,6 +414,7 @@ export class ProgramGroupingMinter {
           album.year ??
           (album.releaseDate ? dayjs(album.releaseDate).year() : null),
         artistUuid: album.artist?.uuid,
+        state: 'ok',
       },
       externalIds: this.mintExternalIdsFromIdentifiers(
         mediaSource,
