@@ -7,7 +7,7 @@ import { binarySearchRange } from '@/util/binarySearch.js';
 import { type Logger } from '@/util/logging/LoggerFactory.js';
 import constants from '@tunarr/shared/constants';
 import dayjs from 'dayjs';
-import { inject, injectable, named } from 'inversify';
+import { inject, injectable } from 'inversify';
 import { first, inRange, isEmpty, isNil, isNull, sumBy } from 'lodash-es';
 import { Lineup, LineupItem } from '../db/derived_types/Lineup.ts';
 import {
@@ -23,9 +23,7 @@ import { IFillerListDB } from '../db/interfaces/IFillerListDB.ts';
 import { IProgramDB } from '../db/interfaces/IProgramDB.ts';
 import { ProgramPlayHistoryDB } from '../db/ProgramPlayHistoryDB.ts';
 import { OneDayMillis } from '../ffmpeg/builder/constants.ts';
-import { IStreamLineupCache } from '../interfaces/IStreamLineupCache.ts';
 import { IFillerPicker } from '../services/interfaces/IFillerPicker.ts';
-import { FillerPickerV2 } from '../services/scheduling/FillerPickerV2.ts';
 import { WrappedError } from '../types/errors.ts';
 import { devAssert } from '../util/debug.ts';
 import { isNonEmptyString } from '../util/index.js';
@@ -77,10 +75,8 @@ export class StreamProgramCalculator {
     @inject(KEYS.Logger) private logger: Logger,
     @inject(KEYS.FillerListDB) private fillerDB: IFillerListDB,
     @inject(KEYS.ChannelDB) private channelDB: IChannelDB,
-    @inject(KEYS.ChannelCache) private channelCache: IStreamLineupCache,
     @inject(KEYS.ProgramDB) private programDB: IProgramDB,
     @inject(KEYS.FillerPicker)
-    @named(FillerPickerV2.name)
     private fillerPicker: IFillerPicker,
     @inject(ProgramPlayHistoryDB)
     private programPlayHistoryDB: ProgramPlayHistoryDB,
@@ -134,15 +130,6 @@ export class StreamProgramCalculator {
       );
 
       if (redirectChannels.includes(currentProgram.program.channel)) {
-        await this.channelCache.recordPlayback(channelContext.uuid, startTime, {
-          type: 'error',
-          error:
-            'Recursive channel redirect found: ' + redirectChannels.join(', '),
-          duration: 60_000,
-          streamDuration: 60_000,
-          startOffset: 0,
-          programBeginMs: req.startTime,
-        });
       }
 
       const nextChannelId = currentProgram.program.channel;
@@ -238,12 +225,6 @@ export class StreamProgramCalculator {
       );
       this.logger.trace('Got lineup item: %O', lineupItem);
     }
-
-    await this.channelCache.recordPlayback(
-      channel.uuid,
-      req.startTime,
-      lineupItem,
-    );
 
     // Record play history for content-backed items (programs and commercials/fillers)
     // Only record if this is a new playback (not a duplicate request for an already-playing program)
