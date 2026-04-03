@@ -1,7 +1,6 @@
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { FileStreamSource } from '../../../../stream/types.ts';
 import {
   createTempWorkdir,
@@ -10,6 +9,8 @@ import {
 } from '../../../../testing/ffmpeg/FfmpegIntegrationHelper.ts';
 import {
   binaries,
+  deriveVideoStreamForFixture,
+  Fixtures,
   qsvInfo,
   qsvTest,
 } from '../../../../testing/ffmpeg/FfmpegTestFixtures.ts';
@@ -18,7 +19,10 @@ import {
   FileOutputLocation,
   VideoFormats,
 } from '../../constants.ts';
-import { PixelFormatYuv420P } from '../../format/PixelFormat.ts';
+import {
+  PixelFormatYuv420P,
+  PixelFormatYuv420P10Le,
+} from '../../format/PixelFormat.ts';
 import {
   AudioInputFilterSource,
   AudioInputSource,
@@ -42,23 +46,8 @@ import { QsvPipelineBuilder } from './QsvPipelineBuilder.ts';
 
 dayjs.extend(duration);
 
-const fixturesDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../../../testing/ffmpeg/fixtures',
-);
-
-const Fixtures = {
-  video720p: path.join(fixturesDir, '720p_h264.ts'),
-  video1080p: path.join(fixturesDir, '1080p_h264.ts'),
-  video480p43: path.join(fixturesDir, '480p_h264.ts'),
-  watermark: path.join(fixturesDir, 'watermark.png'),
-  blackWatermark: path.join(fixturesDir, 'black_watermark.png'),
-} as const;
-
 // Limit output to 1 second in all integration tests to keep runs fast
 const testDuration = dayjs.duration(1, 'second');
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function makeH264VideoInput(inputPath: string, frameSize: FrameSize) {
   return VideoInputSource.withStream(
@@ -69,6 +58,21 @@ function makeH264VideoInput(inputPath: string, frameSize: FrameSize) {
       frameSize,
       index: 0,
       pixelFormat: new PixelFormatYuv420P(),
+      providedSampleAspectRatio: null,
+      colorFormat: null,
+    }),
+  );
+}
+
+function makeHevc10BitVideoInput(inputPath: string, frameSize: FrameSize) {
+  return VideoInputSource.withStream(
+    new FileStreamSource(inputPath),
+    VideoStream.create({
+      codec: VideoFormats.Hevc,
+      displayAspectRatio: '16:9',
+      frameSize,
+      index: 0,
+      pixelFormat: new PixelFormatYuv420P10Le(),
       providedSampleAspectRatio: null,
       colorFormat: null,
     }),
@@ -124,8 +128,6 @@ function makeWatermark(color: 'white' | 'black' = 'white') {
     },
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe.skipIf(!binaries || !qsvInfo)('QsvPipelineBuilder integration', () => {
   let workdir: string;
@@ -291,13 +293,8 @@ describe.skipIf(!binaries || !qsvInfo)('QsvPipelineBuilder integration', () => {
       expect(probe.streams.some((s) => s.codec_type === 'video')).toBe(true);
     },
   );
-});
 
-// ─── Pixel format fix integration tests ──────────────────────────────────────
-
-describe.skipIf(!binaries || !qsvInfo)(
-  'QsvPipelineBuilder pixel format fixes',
-  () => {
+  describe('pixel format fixes', () => {
     let workdir: string;
     let cleanup: () => Promise<void>;
 
@@ -590,5 +587,55 @@ describe.skipIf(!binaries || !qsvInfo)(
         expect(probe.streams.some((s) => s.codec_type === 'video')).toBe(true);
       },
     );
-  },
-);
+  });
+
+  qsvTest(
+    'hevc decoding with setpts',
+    async ({ binaryCapabilities, resolvedQsv, ffmpegVersion }) => {
+      const video = await deriveVideoStreamForFixture(Fixtures.videoHevc1080p);
+      const audio = makeAudioInput(Fixtures.videoHevc1080p);
+
+      const builder = new QsvPipelineBuilder(
+        resolvedQsv.capabilities,
+        binaryCapabilities,
+        video,
+        audio,
+        null,
+        null,
+        null,
+      );
+
+      const frameState = new FrameState({
+        isAnamorphic: false,
+        scaledSize: FrameSize.withDimensions(1280, 720),
+        paddedSize: FrameSize.withDimensions(1280, 720),
+        pixelFormat: new PixelFormatYuv420P(),
+      });
+
+      const outputPath = path.join(workdir, 'qsv_transcode.ts');
+      const pipeline = builder.build(
+        FfmpegState.create({
+          version: ffmpegVersion,
+          outputLocation: FileOutputLocation(outputPath, true),
+          vaapiDevice: resolvedQsv.device,
+          start: dayjs.duration({ seconds: 1 }),
+        }),
+        frameState,
+        DefaultPipelineOptions,
+      );
+
+      const { exitCode, stderr } = runFfmpegWithPipeline(
+        binaries!.ffmpeg,
+        pipeline.getCommandArgs(),
+      );
+
+      expect(
+        exitCode,
+        `Pipeline command failed: ${pipeline.getCommandArgs().join(' ')}\n${stderr}`,
+      ).toBe(0);
+
+      const probe = probeFile(binaries!.ffprobe, outputPath);
+      expect(probe.streams.some((s) => s.codec_type === 'video')).toBe(true);
+    },
+  );
+});

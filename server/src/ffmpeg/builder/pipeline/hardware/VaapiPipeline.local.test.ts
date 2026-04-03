@@ -1,10 +1,7 @@
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { FileStreamSource } from '../../../../stream/types.ts';
-
-dayjs.extend(duration);
 import {
   createTempWorkdir,
   probeFile,
@@ -12,10 +9,12 @@ import {
 } from '../../../../testing/ffmpeg/FfmpegIntegrationHelper.ts';
 import {
   binaries,
+  Fixtures,
   vaapiInfo,
   vaapiOpenclSupported,
   vaapiTest,
 } from '../../../../testing/ffmpeg/FfmpegTestFixtures.ts';
+import { TONEMAP_ENABLED, TUNARR_ENV_VARS } from '../../../../util/env.ts';
 import {
   EmptyFfmpegCapabilities,
   FfmpegCapabilities,
@@ -60,21 +59,9 @@ import {
 } from '../../state/FfmpegState.ts';
 import { FrameState } from '../../state/FrameState.ts';
 import { FrameSize } from '../../types.ts';
-import { TONEMAP_ENABLED, TUNARR_ENV_VARS } from '../../../../util/env.ts';
 import { VaapiPipelineBuilder } from './VaapiPipelineBuilder.ts';
 
-const fixturesDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../../../testing/ffmpeg/fixtures',
-);
-
-const Fixtures = {
-  video720p: path.join(fixturesDir, '720p_h264.ts'),
-  video1080p: path.join(fixturesDir, '1080p_h264.ts'),
-  video480p43: path.join(fixturesDir, '480p_h264.ts'),
-  videoHdr720p: path.join(fixturesDir, '720p_hevc_hdr10.ts'),
-  watermark: path.join(fixturesDir, 'watermark.png'),
-} as const;
+dayjs.extend(duration);
 
 // Limit output to 1 second in all integration tests to keep runs fast
 const testDuration = dayjs.duration(1, 'second');
@@ -905,10 +892,22 @@ describe.skipIf(!binaries || !vaapiInfo)(
     // Capabilities that include both H264 and HEVC decode/encode
     function makeVaapiCapsWithH264AndHevc() {
       return new VaapiHardwareCapabilities([
-        new VaapiProfileEntrypoint(VaapiProfiles.H264Main, VaapiEntrypoint.Decode),
-        new VaapiProfileEntrypoint(VaapiProfiles.H264Main, VaapiEntrypoint.Encode),
-        new VaapiProfileEntrypoint(VaapiProfiles.HevcMain10, VaapiEntrypoint.Decode),
-        new VaapiProfileEntrypoint(VaapiProfiles.HevcMain, VaapiEntrypoint.Encode),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.H264Main,
+          VaapiEntrypoint.Decode,
+        ),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.H264Main,
+          VaapiEntrypoint.Encode,
+        ),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.HevcMain10,
+          VaapiEntrypoint.Decode,
+        ),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.HevcMain,
+          VaapiEntrypoint.Encode,
+        ),
       ]);
     }
 
@@ -1210,9 +1209,18 @@ describe.skipIf(!binaries || !vaapiInfo || !canDecodeHdr)(
 
     function makeHdrVaapiCapabilities() {
       return new VaapiHardwareCapabilities([
-        new VaapiProfileEntrypoint(VaapiProfiles.HevcMain10, VaapiEntrypoint.Decode),
-        new VaapiProfileEntrypoint(VaapiProfiles.HevcMain, VaapiEntrypoint.Encode),
-        new VaapiProfileEntrypoint(VaapiProfiles.H264Main, VaapiEntrypoint.Encode),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.HevcMain10,
+          VaapiEntrypoint.Decode,
+        ),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.HevcMain,
+          VaapiEntrypoint.Encode,
+        ),
+        new VaapiProfileEntrypoint(
+          VaapiProfiles.H264Main,
+          VaapiEntrypoint.Encode,
+        ),
       ]);
     }
 
@@ -1231,14 +1239,17 @@ describe.skipIf(!binaries || !vaapiInfo || !canDecodeHdr)(
       async ({ binaryCapabilities, ffmpegVersion, resolvedVaapi }) => {
         process.env[TONEMAP_ENABLED] = 'true';
 
-        const video = makeHdrVideoInput(Fixtures.videoHdr720p);
-        const audio = makeAudioInput(Fixtures.videoHdr720p);
+        const video = makeHdrVideoInput(Fixtures.videoHevc720p);
+        const audio = makeAudioInput(Fixtures.videoHevc720p);
 
         // Merge TonemapOpencl into real capabilities so this path is available
         const capsWithOpencl = new FfmpegCapabilities(
           binaryCapabilities.allOptions(),
           binaryCapabilities.allVideoEncoders(),
-          new Set([...binaryCapabilities.allFilters(), KnownFfmpegFilters.TonemapOpencl]),
+          new Set([
+            ...binaryCapabilities.allFilters(),
+            KnownFfmpegFilters.TonemapOpencl,
+          ]),
           new Set(),
         );
 
@@ -1285,8 +1296,8 @@ describe.skipIf(!binaries || !vaapiInfo || !canDecodeHdr)(
       'TONEMAP_ENABLED=false skips tonemapping',
       async ({ binaryCapabilities, ffmpegVersion, resolvedVaapi }) => {
         // No TONEMAP_ENABLED set (defaults to off)
-        const video = makeHdrVideoInput(Fixtures.videoHdr720p);
-        const audio = makeAudioInput(Fixtures.videoHdr720p);
+        const video = makeHdrVideoInput(Fixtures.videoHevc720p);
+        const audio = makeAudioInput(Fixtures.videoHevc720p);
 
         const builder = new VaapiPipelineBuilder(
           makeHdrVaapiCapabilities(),
@@ -1329,8 +1340,8 @@ describe.skipIf(!binaries || !vaapiInfo || !canDecodeHdr)(
       async ({ ffmpegVersion, resolvedVaapi }) => {
         process.env[TONEMAP_ENABLED] = 'true';
 
-        const video = makeHdrVideoInput(Fixtures.videoHdr720p);
-        const audio = makeAudioInput(Fixtures.videoHdr720p);
+        const video = makeHdrVideoInput(Fixtures.videoHevc720p);
+        const audio = makeAudioInput(Fixtures.videoHevc720p);
 
         const builder = new VaapiPipelineBuilder(
           makeHdrVaapiCapabilities(),
@@ -1373,14 +1384,17 @@ describe.skipIf(!binaries || !vaapiInfo || !canDecodeHdr)(
       async ({ binaryCapabilities, ffmpegVersion, resolvedVaapi }) => {
         process.env[TONEMAP_ENABLED] = 'true';
 
-        const video = makeHdrVideoInput(Fixtures.videoHdr720p);
-        const audio = makeAudioInput(Fixtures.videoHdr720p);
+        const video = makeHdrVideoInput(Fixtures.videoHevc720p);
+        const audio = makeAudioInput(Fixtures.videoHevc720p);
 
         // Force only tonemap_vaapi to be available
         const capsWithVaapiTonemap = new FfmpegCapabilities(
           binaryCapabilities.allOptions(),
           binaryCapabilities.allVideoEncoders(),
-          new Set([...binaryCapabilities.allFilters(), KnownFfmpegFilters.TonemapVaapi]),
+          new Set([
+            ...binaryCapabilities.allFilters(),
+            KnownFfmpegFilters.TonemapVaapi,
+          ]),
           new Set(),
         );
 

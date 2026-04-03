@@ -165,6 +165,18 @@ export class QsvPipelineBuilder extends SoftwarePipelineBuilder {
       currentState = this.decoder.nextState(currentState);
     }
 
+    currentState = this.setDeinterlace(currentState);
+    currentState = this.setScale(currentState);
+    currentState = this.setTonemap(currentState);
+    currentState = this.setPad(currentState);
+    this.setStillImageLoop();
+
+    if (currentState.frameDataLocation === FrameDataLocation.Hardware) {
+      const hwDownload = new HardwareDownloadFilter(currentState);
+      currentState = hwDownload.nextState(currentState);
+      this.videoInputSource.filterSteps.push(hwDownload);
+    }
+
     if (this.desiredState.videoFormat !== VideoFormats.Copy) {
       currentState = this.addFilterToVideoChain(
         currentState,
@@ -191,21 +203,6 @@ export class QsvPipelineBuilder extends SoftwarePipelineBuilder {
           this.pipelineSteps.splice(idx, 1);
         }
       }
-    }
-
-    currentState = this.setDeinterlace(currentState);
-    currentState = this.setScale(currentState);
-    currentState = this.setTonemap(currentState);
-    currentState = this.setPad(currentState);
-    this.setStillImageLoop();
-
-    if (
-      currentState.frameDataLocation === FrameDataLocation.Hardware &&
-      this.context.hasWatermark
-    ) {
-      const hwDownload = new HardwareDownloadFilter(currentState);
-      currentState = hwDownload.nextState(currentState);
-      this.videoInputSource.filterSteps.push(hwDownload);
     }
 
     currentState = this.setWatermark(currentState);
@@ -438,13 +435,22 @@ export class QsvPipelineBuilder extends SoftwarePipelineBuilder {
 
       // Only emit -pix_fmt for software encoders; QSV encoders don't accept
       // a -pix_fmt flag and it causes swscaler errors with hardware frames.
-      if (
-        currentState.pixelFormat?.name !== targetPixelFormat.name &&
-        this.ffmpegState.encoderHwAccelMode !== HardwareAccelerationMode.Qsv
-      ) {
-        // TODO: Handle color params
-        this.pipelineSteps.push(new PixelFormatOutputOption(targetPixelFormat));
+      if (currentState.pixelFormat?.name !== targetPixelFormat.name) {
+        if (
+          this.ffmpegState.encoderHwAccelMode === HardwareAccelerationMode.Qsv
+        ) {
+          steps.push(
+            new QsvFormatFilter(
+              targetPixelFormat.toHardwareFormat() ?? targetPixelFormat,
+            ),
+          );
+        } else {
+          this.pipelineSteps.push(
+            new PixelFormatOutputOption(targetPixelFormat),
+          );
+        }
       }
+      // TODO: Handle color params
 
       this.context.filterChain.pixelFormatFilterSteps = steps;
     } else if (
