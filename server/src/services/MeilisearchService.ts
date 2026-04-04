@@ -277,6 +277,7 @@ type BaseProgramSearchDocument = {
   director: Director[];
   studio?: Studio[];
   tags: string[];
+  state: ProgramState;
 };
 
 export type TerminalProgramSearchDocument<
@@ -303,7 +304,6 @@ export type TerminalProgramSearchDocument<
   audioChannels?: number;
   audioLanguages?: string[];
   subtitleLanguages?: string[];
-  state: ProgramState;
 };
 
 export type ProgramSearchDocument =
@@ -815,6 +815,7 @@ export class MeilisearchService implements ISearchService {
       ),
       tags: show.tags,
       studio: show.studios,
+      state: 'ok',
     };
 
     await this.client()
@@ -865,6 +866,7 @@ export class MeilisearchService implements ISearchService {
           `${eid.type}|${eid.sourceId ?? ''}|${eid.id}` satisfies MergedExternalId,
       ),
       tags: season.tags,
+      state: 'ok',
       parent: {
         id: encodeCaseSensitiveId(season.show.uuid),
         externalIds: showEids ?? [],
@@ -988,6 +990,7 @@ export class MeilisearchService implements ISearchService {
           `${eid.type}|${eid.sourceId ?? ''}|${eid.id}` satisfies MergedExternalId,
       ),
       tags: artist.tags,
+      state: 'ok',
     };
 
     await this.client()
@@ -1036,6 +1039,7 @@ export class MeilisearchService implements ISearchService {
           `${eid.type}|${eid.sourceId ?? ''}|${eid.id}` satisfies MergedExternalId,
       ),
       tags: album.tags,
+      state: 'ok',
       parent: {
         id: encodeCaseSensitiveId(album.artist.uuid),
         externalIds: artistEids ?? [],
