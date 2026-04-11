@@ -274,16 +274,16 @@ export class TVGuideService {
     const { programs } = channelAndLineup;
 
     return seq.collect(programs, (program) => {
-      const startTime = Math.max(program.startTimeMs, beginningTimeMs);
-      const stopTime = Math.min(
-        program.startTimeMs + program.lineupItem.durationMs,
-        endTimeMs,
-      );
-
-      if (startTime < stopTime) {
+      const programEndTime =
+        program.startTimeMs + program.lineupItem.durationMs;
+      const startsInRange =
+        program.startTimeMs >= beginningTimeMs &&
+        program.startTimeMs < endTimeMs;
+      const endsInRange =
+        programEndTime > beginningTimeMs && programEndTime <= endTimeMs;
+      if (startsInRange || endsInRange) {
         return program;
       }
-
       return;
     });
   }
