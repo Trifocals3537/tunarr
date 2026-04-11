@@ -189,7 +189,11 @@ export class TVGuideService {
     );
   }
 
-  async buildAllChannels(guideDuration: Duration, force: boolean = false) {
+  async buildAllChannels(
+    guideDuration: Duration,
+    force: boolean = false,
+    startTime: number = +dayjs(),
+  ) {
     return this.withGuideContext(async () => {
       if (isEmpty(this.channelsById)) {
         const placeholderChannel = await this.makePlaceholderChannel();
@@ -198,7 +202,13 @@ export class TVGuideService {
         delete this.cachedGuide[PlaceholderChannelId];
         await Promise.all(
           keys(this.channelsById).map((channelId) =>
-            this.buildChannelGuide(guideDuration, channelId, false, force),
+            this.buildChannelGuide(
+              guideDuration,
+              channelId,
+              false,
+              force,
+              startTime,
+            ),
           ),
         );
       }
