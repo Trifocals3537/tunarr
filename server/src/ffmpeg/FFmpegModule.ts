@@ -41,6 +41,8 @@ const FFmpegModule = new ContainerModule((bind) => {
       )(transcodeConfig, channel, streamMode);
     };
   }).whenTargetIsDefault();
+
+  bind(FfmpegInfo).toSelf().inSingletonScope();
 });
 
 export { FFmpegModule };
