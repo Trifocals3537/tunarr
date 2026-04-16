@@ -45,6 +45,7 @@ export abstract class MediaSourceMovieLibraryScanner<
     private searchService: MeilisearchService,
     protected programConverter: ProgramConverter,
     protected programMinter: ProgramDaoMinter,
+    // protected externalSubtitleDownloader: ExternalSubtitleDownloader,
   ) {
     super(logger, mediaSourceDB);
   }

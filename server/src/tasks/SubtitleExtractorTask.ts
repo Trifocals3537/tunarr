@@ -1,5 +1,5 @@
 import { seq } from '@tunarr/shared/util';
-import { ContentGuideProgram } from '@tunarr/types';
+import { ContentGuideProgram, tag } from '@tunarr/types';
 import dayjs from 'dayjs';
 import { inject, injectable } from 'inversify';
 import { isUndefined } from 'lodash-es';
@@ -47,7 +47,7 @@ const DurationExtractionFilter = z.object({
   durationMs: z.number(),
 });
 
-export type DurationExtractionFilter = z.infer<typeof DurationExtractionFilter>;
+type DurationExtractionFilter = z.infer<typeof DurationExtractionFilter>;
 
 const ExtractionFilter = z.discriminatedUnion('type', [
   ChannelExtractionFilter,
@@ -59,7 +59,7 @@ const SubtitleExtractorTaskRequest = z.object({
   filter: ExtractionFilter.optional(),
 });
 
-export type SubtitleExtractorTaskRequest = z.infer<
+type SubtitleExtractorTaskRequest = z.infer<
   typeof SubtitleExtractorTaskRequest
 >;
 
@@ -230,7 +230,15 @@ export class SubtitleExtractorTask extends Task2<
             return;
           }
 
-          const filePath = getSubtitleCacheFilePath(program, subtitle);
+          const filePath = getSubtitleCacheFilePath(
+            {
+              externalKey: program.externalKey,
+              externalSourceId: tag(program.externalSourceId),
+              externalSourceType: program.externalSourceType,
+              id: program.id,
+            },
+            subtitle,
+          );
           if (!filePath) {
             return;
           }

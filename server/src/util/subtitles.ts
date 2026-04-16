@@ -1,4 +1,4 @@
-import type { MediaSourceType } from '@/db/schema/base.js';
+import type { MediaSourceId, MediaSourceType } from '@/db/schema/base.js';
 import crypto from 'node:crypto';
 import path from 'path';
 import { match, P } from 'ts-pattern';
@@ -8,7 +8,7 @@ import type { Nullable } from '../types/util.ts';
 type MinimalProgram = {
   id: string;
   externalSourceType: MediaSourceType;
-  externalSourceId: string;
+  externalSourceId: MediaSourceId;
   externalKey: string;
 };
 

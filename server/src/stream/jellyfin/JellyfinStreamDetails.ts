@@ -353,7 +353,12 @@ export class JellyfinStreamDetails extends ExternalStreamDetailsFetcher<Jellyfin
         if (details.type === 'external' && isDefined(index)) {
           const fullPath =
             await this.externalSubtitleDownloader.downloadSubtitlesIfNecessary(
-              item,
+              {
+                externalKey: item.externalKey,
+                externalSourceId: item.mediaSourceId,
+                sourceType: 'jellyfin',
+                uuid: item.uuid,
+              },
               details,
               ({ extension: ext }) =>
                 this.jellyfin.getSubtitles(

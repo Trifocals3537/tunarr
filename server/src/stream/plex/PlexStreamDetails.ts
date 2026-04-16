@@ -428,7 +428,7 @@ export class PlexStreamDetails extends ExternalStreamDetailsFetcher<PlexT> {
     const subtitleStreamDetails = await seq.asyncCollect(
       sortBy(
         filter(mediaStreams, (stream): stream is PlexMediaSubtitleStream => {
-          return stream.streamType === 3;
+          return stream.streamType === 3 && !stream.embeddedInVideo;
         }),
         (stream) => [
           stream.selected ? -1 : 0,
@@ -462,7 +462,12 @@ export class PlexStreamDetails extends ExternalStreamDetailsFetcher<PlexT> {
           const key = stream.key;
           const fullPath =
             await this.externalSubtitleDownloader.downloadSubtitlesIfNecessary(
-              item,
+              {
+                externalKey: item.externalKey,
+                externalSourceId: item.mediaSourceId,
+                sourceType: 'plex',
+                uuid: item.uuid,
+              },
               details,
               () => plexApiClient.getSubtitles(key),
             );
