@@ -359,7 +359,10 @@ export class JellyfinStreamDetails extends ExternalStreamDetailsFetcher<Jellyfin
                 sourceType: 'jellyfin',
                 uuid: item.uuid,
               },
-              details,
+              {
+                codec: details.codec,
+                streamIndex: details.index,
+              },
               ({ extension: ext }) =>
                 this.jellyfin.getSubtitles(
                   item.externalKey,

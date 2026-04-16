@@ -2053,49 +2053,15 @@ export class PlexApiClient extends MediaSourceApiClient<PlexTypes> {
             streamType: isDefined(stream.index)
               ? 'subtitles'
               : 'external_subtitles',
-            // type: isDefined(stream.index) ? 'embedded' : 'external',
             codec: stream.codec.toLocaleLowerCase(),
             default: stream.default ?? false,
             index: stream.index ?? 0,
             title: stream.displayTitle,
-            // description: stream.extendedDisplayTitle,
             sdh,
-            // path: stream.key ? this.getFullUrl(stream.key) : undefined,
-            // languageCodeISO6391: stream.languageTag,
             languageCodeISO6392: stream.languageCode,
-            fileName: isNonEmptyString(stream.key)
-              ? this.getFullUrl(stream.key)
-              : undefined,
+            fileName: stream.key,
             forced: stream.forced ?? false,
           } satisfies MediaStream;
-
-          // if (details.type === 'external' && isNonEmptyString(stream.key)) {
-          //   const key = stream.key;
-          //   const fullPath =
-          //     await this.externalSubtitleDownloader.downloadSubtitlesIfNecessary(
-          //       {
-          //         externalKey: plexItem.ratingKey,
-          //         externalSourceId: this.options.mediaSource.uuid,
-          //         sourceType: 'plex',
-          //         uuid:
-          //       },
-          //       details,
-          //       () => this.getSubtitles(key),
-          //     );
-
-          //   if (fullPath) {
-          //     details.path = fullPath;
-          //     return details;
-          //   }
-
-          //   this.logger.warn(
-          //     'Skipping external subtitles at index %d because download failed. Please check logs and file an issue for assistance.',
-          //     stream.index ?? -1,
-          //   );
-
-          //   return;
-          // }
-
           return details;
         },
       ),

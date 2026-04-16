@@ -350,7 +350,10 @@ export class EmbyStreamDetails extends ExternalStreamDetailsFetcher<EmbyT> {
                 sourceType: 'emby',
                 uuid: item.uuid,
               },
-              details,
+              {
+                codec: details.codec,
+                streamIndex: details.index,
+              },
               ({ extension: ext }) =>
                 this.emby.getSubtitles(
                   item.externalKey,

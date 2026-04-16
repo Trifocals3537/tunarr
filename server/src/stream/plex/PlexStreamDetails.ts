@@ -468,7 +468,10 @@ export class PlexStreamDetails extends ExternalStreamDetailsFetcher<PlexT> {
                 sourceType: 'plex',
                 uuid: item.uuid,
               },
-              details,
+              {
+                codec: details.codec,
+                streamIndex: details.index,
+              },
               () => plexApiClient.getSubtitles(key),
             );
 

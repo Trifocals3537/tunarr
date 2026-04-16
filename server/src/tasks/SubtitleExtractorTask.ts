@@ -237,7 +237,7 @@ export class SubtitleExtractorTask extends Task2<
               externalSourceType: program.externalSourceType,
               id: program.id,
             },
-            subtitle,
+            { streamIndex: subtitle.index, codec: subtitle.codec },
           );
           if (!filePath) {
             return;

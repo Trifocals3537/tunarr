@@ -5,17 +5,21 @@ import { MediaSourceId, MediaSourceType } from '../db/schema/base.ts';
 import { QueryResult } from '../external/BaseApiClient.ts';
 import { FileSystemService } from '../services/FileSystemService.ts';
 import { KEYS } from '../types/inject.ts';
+import { Maybe } from '../types/util.ts';
 import { fileExists } from '../util/fsUtil.ts';
 import { Logger } from '../util/logging/LoggerFactory.ts';
 import {
   getSubtitleCacheFilePath,
   subtitleCodecToExt,
 } from '../util/subtitles.ts';
-import { SubtitleStreamDetails } from './types.ts';
 
-type GetSubtitleCallbackArgs = {
+export type GetSubtitleCallbackArgs = {
   extension: string;
 };
+
+type GetSubtitlesCallback = (
+  cbArgs: GetSubtitleCallbackArgs,
+) => Promise<QueryResult<string>>;
 
 type ExternalItem = {
   externalKey: string;
@@ -41,10 +45,8 @@ export class ExternalSubtitleDownloader {
    */
   async downloadSubtitlesIfNecessary(
     item: ExternalItem,
-    details: SubtitleStreamDetails,
-    getSubtitlesCb: (
-      args: GetSubtitleCallbackArgs,
-    ) => Promise<QueryResult<string>>,
+    details: { streamIndex: Maybe<number>; codec: string },
+    getSubtitlesCb: GetSubtitlesCallback,
   ) {
     const outPath = getSubtitleCacheFilePath(
       {
@@ -53,7 +55,10 @@ export class ExternalSubtitleDownloader {
         externalSourceType: item.sourceType,
         id: item.uuid,
       },
-      details,
+      {
+        codec: details.codec,
+        streamIndex: details.streamIndex,
+      },
     );
     const ext = subtitleCodecToExt(details.codec);
 
