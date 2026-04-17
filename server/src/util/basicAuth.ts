@@ -27,6 +27,13 @@ function isPublicPath(url: string) {
     return true;
   }
 
+  if (
+    path.startsWith('/api/programs/') &&
+    path.includes('/artwork/')
+  ) {
+    return true;
+  }
+
   return PUBLIC_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
